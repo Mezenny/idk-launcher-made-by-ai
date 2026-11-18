@@ -1,0 +1,6 @@
+{
+  "name": "Zstar Launcher",
+  "description": "A high-performance Android home screen replacement with extensive themes, icon packs, gesture controls, third-party widget hosting, and unified app & file search.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
