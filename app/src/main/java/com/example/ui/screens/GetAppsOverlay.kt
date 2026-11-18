@@ -63,10 +63,12 @@ import com.example.ui.theme.LocalZstarColors
 @Composable
 fun GetAppsOverlay(
     installedApps: List<AppInfo>,
+    isPlayStoreInstalled: Boolean,
     onOpenStoreHome: () -> Unit,
     onSearchStore: (String) -> Unit,
     onDownloadPackage: (String) -> Unit,
     onLaunchInstalledApp: (AppInfo) -> Unit,
+    onPinStoreToHome: () -> Unit,
     onClose: () -> Unit
 ) {
     BackHandler { onClose() }
@@ -136,7 +138,10 @@ fun GetAppsOverlay(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Play Store", style = MaterialTheme.typography.labelMedium)
+                Text(
+                    text = if (isPlayStoreInstalled) "Play Store" else "Play Web",
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
 
@@ -246,19 +251,32 @@ fun GetAppsOverlay(
             }
 
             item(key = "store_info_banner") {
-                Surface(
-                    color = zstarColors.glassSurface,
-                    shape = RoundedCornerShape(18.dp),
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(zstarColors.glassSurface)
                         .border(1.dp, zstarColors.glassBorder, RoundedCornerShape(18.dp))
+                        .padding(14.dp)
                 ) {
                     Text(
-                        text = "Newly downloaded apps appear automatically in Zstar's App Drawer as soon as installation finishes.",
+                        text = if (isPlayStoreInstalled) {
+                            "Google Play Store is installed on this device. Newly downloaded apps appear automatically in Zstar's App Drawer."
+                        } else {
+                            "Google Play Store isn't pre-installed on this device/emulator image. Zstar pre-pins this App Store hub on your Home screen and opens Google Play in your browser."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(14.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    OutlinedButton(
+                        onClick = onPinStoreToHome,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_pin_store_home")
+                    ) {
+                        Text("Pin Store Shortcut to Home Screen")
+                    }
                 }
             }
 

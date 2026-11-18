@@ -74,6 +74,7 @@ import com.example.model.HomeItemUi
 import com.example.model.LauncherSettingsState
 import com.example.model.PerformanceMetrics
 import com.example.ui.components.FolderIconTile
+import com.example.ui.components.StoreShortcutIconTile
 import com.example.ui.components.StyledAppIconTile
 import com.example.ui.components.ThirdPartyWidgetHostCard
 import com.example.ui.components.ZstarClockTelemetryWidget
@@ -94,6 +95,7 @@ fun LauncherHomeScreen(
     resolveWidgetProvider: (String?) -> android.appwidget.AppWidgetProviderInfo?,
     isEditMode: Boolean,
     isDefaultLauncher: Boolean,
+    isPlayStoreInstalled: Boolean,
     onSetEditMode: (Boolean) -> Unit,
     onRequestDefaultHome: () -> Unit,
     onTriggerGesture: (GestureTrigger) -> Unit,
@@ -275,12 +277,15 @@ fun LauncherHomeScreen(
                         widgetHostManager = widgetHostManager,
                         resolveWidgetProvider = resolveWidgetProvider,
                         isEditMode = isEditMode,
+                        isPlayStoreInstalled = isPlayStoreInstalled,
+                        onSetEditMode = onSetEditMode,
                         onLaunchApp = onLaunchApp,
                         onOpenFolder = onOpenFolder,
                         onShowAppMenu = onShowAppMenu,
                         onRemoveHomeItem = onRemoveHomeItem,
                         onResizeWidget = onResizeWidget,
                         onOpenSearch = { onOpenOverlay(LauncherOverlay.UniversalSearch) },
+                        onOpenGetApps = { onOpenOverlay(LauncherOverlay.GetApps) },
                         onOpenSettings = { onOpenOverlay(LauncherOverlay.Settings()) },
                         onOpenWidgetPicker = { onOpenOverlay(LauncherOverlay.WidgetPicker) },
                         onToggleZenMode = onToggleZenMode
@@ -342,12 +347,15 @@ private fun HomeWorkspacePage(
     widgetHostManager: WidgetHostManager,
     resolveWidgetProvider: (String?) -> android.appwidget.AppWidgetProviderInfo?,
     isEditMode: Boolean,
+    isPlayStoreInstalled: Boolean,
+    onSetEditMode: (Boolean) -> Unit,
     onLaunchApp: (AppInfo) -> Unit,
     onOpenFolder: (HomeItemUi) -> Unit,
     onShowAppMenu: (AppInfo, HomeItemUi) -> Unit,
     onRemoveHomeItem: (HomeItemUi) -> Unit,
     onResizeWidget: (HomeItemUi, Int, Int) -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenGetApps: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenWidgetPicker: () -> Unit,
     onToggleZenMode: () -> Unit
@@ -361,7 +369,9 @@ private fun HomeWorkspacePage(
     }
     val gridItems = remember(pageItems) {
         pageItems.filter {
-            it.type == HomeItemType.APP || it.type == HomeItemType.FOLDER
+            it.type == HomeItemType.APP ||
+                it.type == HomeItemType.FOLDER ||
+                it.type == HomeItemType.ZSTAR_STORE_SHORTCUT
         }
     }
 
@@ -439,6 +449,20 @@ private fun HomeWorkspacePage(
                                         onRemoveInEditMode = { onRemoveHomeItem(item) },
                                         onClick = { onOpenFolder(item) },
                                         onLongClick = { onOpenFolder(item) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else if (item.type == HomeItemType.ZSTAR_STORE_SHORTCUT) {
+                                    StoreShortcutIconTile(
+                                        label = if (isPlayStoreInstalled) "Play Store" else "App Store",
+                                        iconPackStyle = settings.iconPackStyle,
+                                        iconShape = settings.iconShape,
+                                        iconSize = iconSize,
+                                        showLabel = settings.showAppLabels,
+                                        reduceMotion = settings.reduceMotion,
+                                        isEditMode = isEditMode,
+                                        onRemoveInEditMode = { onRemoveHomeItem(item) },
+                                        onClick = onOpenGetApps,
+                                        onLongClick = { onSetEditMode(!isEditMode) },
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 } else if (item.appInfo != null) {

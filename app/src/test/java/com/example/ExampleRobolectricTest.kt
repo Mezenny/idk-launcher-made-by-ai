@@ -86,6 +86,11 @@ class ExampleRobolectricTest {
 
         val detailsIntent = AppDownloadHelper.buildPlayStoreDetailsIntent("com.spotify.music")
         assertEquals("market://details?id=com.spotify.music", detailsIntent.dataString)
+        assertEquals(
+            "https://play.google.com/store/apps/details?id=com.spotify.music",
+            AppDownloadHelper.buildPlayStoreWebDetailsIntent("com.spotify.music").dataString
+        )
         assertTrue(AppDownloadHelper.featuredCatalog.isNotEmpty())
+        assertTrue(com.example.model.HomeItemType.entries.contains(com.example.model.HomeItemType.ZSTAR_STORE_SHORTCUT))
     }
 }

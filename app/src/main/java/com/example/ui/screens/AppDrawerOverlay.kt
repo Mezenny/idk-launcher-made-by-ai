@@ -59,6 +59,7 @@ import com.example.data.system.AppIconCache
 import com.example.model.AppCategory
 import com.example.model.AppInfo
 import com.example.model.LauncherSettingsState
+import com.example.ui.components.StoreShortcutIconTile
 import com.example.ui.components.StyledAppIconTile
 import com.example.ui.theme.LocalZstarColors
 import kotlinx.coroutines.launch
@@ -68,6 +69,7 @@ fun AppDrawerOverlay(
     apps: List<AppInfo>,
     selectedCategory: AppCategory,
     query: String,
+    isPlayStoreInstalled: Boolean,
     settings: LauncherSettingsState,
     iconCache: AppIconCache,
     onCategoryChange: (AppCategory) -> Unit,
@@ -221,12 +223,17 @@ fun AppDrawerOverlay(
         Spacer(modifier = Modifier.height(10.dp))
 
         // App Grid + Quick A-Z Jump Rail
+        val showBuiltInStoreTile = !isPlayStoreInstalled &&
+            (selectedCategory == AppCategory.ALL || selectedCategory == AppCategory.TOOLS) &&
+            (query.isBlank() ||
+                "play store app store get apps".contains(query.trim().lowercase()))
+
         Row(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            if (apps.isEmpty()) {
+            if (apps.isEmpty() && !showBuiltInStoreTile) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -266,6 +273,19 @@ fun AppDrawerOverlay(
                         .weight(1f)
                         .fillMaxHeight()
                 ) {
+                    if (showBuiltInStoreTile) {
+                        item(key = "zstar_built_in_store") {
+                            StoreShortcutIconTile(
+                                label = "App Store",
+                                iconPackStyle = settings.iconPackStyle,
+                                iconShape = settings.iconShape,
+                                iconSize = (52f * settings.iconScale).dp,
+                                showLabel = true,
+                                reduceMotion = settings.reduceMotion,
+                                onClick = onOpenGetApps
+                            )
+                        }
+                    }
                     items(apps, key = { it.componentKey }) { app ->
                         StyledAppIconTile(
                             app = app,

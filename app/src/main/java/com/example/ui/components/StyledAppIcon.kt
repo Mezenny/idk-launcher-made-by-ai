@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Shop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -418,6 +419,125 @@ fun FolderIconTile(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun StoreShortcutIconTile(
+    label: String,
+    iconPackStyle: IconPackStyle,
+    iconShape: IconShapeOption,
+    iconSize: Dp = 54.dp,
+    showLabel: Boolean = true,
+    reduceMotion: Boolean = false,
+    isEditMode: Boolean = false,
+    onRemoveInEditMode: (() -> Unit)? = null,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = onClick,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && !reduceMotion) 0.90f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "store_icon_press_scale"
+    )
+    val zstarColors = LocalZstarColors.current
+    val shape = iconShapeToComposeShape(iconShape)
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(16.dp))
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .testTag("app_tile_zstar_store")
+    ) {
+        Box(contentAlignment = Alignment.TopEnd) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(iconSize)
+                    .clip(shape)
+                    .background(
+                        when (iconPackStyle) {
+                            IconPackStyle.NEON_OUTLINE -> Brush.linearGradient(
+                                listOf(Color(0xFF070B14), Color(0xFF101829))
+                            )
+                            else -> Brush.linearGradient(
+                                listOf(
+                                    primary.copy(alpha = 0.88f),
+                                    secondary.copy(alpha = 0.88f)
+                                )
+                            )
+                        }
+                    )
+                    .border(
+                        width = if (iconPackStyle == IconPackStyle.NEON_OUTLINE) 1.6.dp else 1.dp,
+                        color = if (iconPackStyle == IconPackStyle.NEON_OUTLINE) primary else Color.White.copy(alpha = 0.35f),
+                        shape = shape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Shop,
+                    contentDescription = label,
+                    tint = if (iconPackStyle == IconPackStyle.NEON_OUTLINE) primary else Color.White,
+                    modifier = Modifier.size(iconSize * 0.54f)
+                )
+            }
+
+            if (isEditMode && onRemoveInEditMode != null) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.error)
+                        .combinedClickable(onClick = onRemoveInEditMode)
+                        .testTag("remove_item_zstar_store")
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Remove $label",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+
+        if (showLabel) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 11.5.sp,
+                    shadow = Shadow(Color.Black.copy(alpha = 0.72f), Offset(0f, 1.5f), 4f)
+                ),
+                color = zstarColors.homeLabelColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

@@ -19,6 +19,7 @@ import com.example.model.ThemePreset
 import com.example.model.WallpaperPreset
 import com.example.model.defaultGestureMappings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.zstarDataStore: DataStore<Preferences> by preferencesDataStore(name = "zstar_settings")
@@ -44,6 +45,7 @@ class SettingsDataStore(private val context: Context) {
         val SHOW_PERF_HUD = booleanPreferencesKey("show_perf_hud")
         val ZEN_MODE = booleanPreferencesKey("zen_mode")
         val SHOW_BOOT_ANIMATION = booleanPreferencesKey("show_boot_animation")
+        val STORE_SHORTCUT_SEEDED = booleanPreferencesKey("store_shortcut_seeded")
 
         fun gestureActionKey(trigger: GestureTrigger) = stringPreferencesKey("gesture_action_${trigger.id}")
         fun gestureAppKey(trigger: GestureTrigger) = stringPreferencesKey("gesture_app_${trigger.id}")
@@ -165,6 +167,14 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun setShowBootAnimation(enabled: Boolean) {
         context.zstarDataStore.edit { it[Keys.SHOW_BOOT_ANIMATION] = enabled }
+    }
+
+    suspend fun isStoreShortcutSeeded(): Boolean {
+        return context.zstarDataStore.data.map { it[Keys.STORE_SHORTCUT_SEEDED] ?: false }.first()
+    }
+
+    suspend fun markStoreShortcutSeeded() {
+        context.zstarDataStore.edit { it[Keys.STORE_SHORTCUT_SEEDED] = true }
     }
 
     suspend fun setGestureBinding(trigger: GestureTrigger, binding: GestureBinding) {

@@ -156,6 +156,7 @@ class MainActivity : ComponentActivity() {
             val metrics by viewModel.performanceMetrics.collectAsStateWithLifecycle()
             val networkStatus by viewModel.networkStatus.collectAsStateWithLifecycle()
             val volumeState by viewModel.volumeState.collectAsStateWithLifecycle()
+            val isPlayStoreInstalled by viewModel.isPlayStoreInstalled.collectAsStateWithLifecycle()
             val menuApp by viewModel.selectedAppForMenu.collectAsStateWithLifecycle()
             val menuHomeItem by viewModel.selectedHomeItemForMenu.collectAsStateWithLifecycle()
 
@@ -342,6 +343,7 @@ class MainActivity : ComponentActivity() {
                         resolveWidgetProvider = viewModel::resolveWidgetProviderInfo,
                         isEditMode = isEditMode,
                         isDefaultLauncher = isDefaultLauncher,
+                        isPlayStoreInstalled = isPlayStoreInstalled,
                         onSetEditMode = viewModel::setEditMode,
                         onRequestDefaultHome = requestDefaultHome,
                         onTriggerGesture = viewModel::triggerGesture,
@@ -370,6 +372,7 @@ class MainActivity : ComponentActivity() {
                             apps = drawerApps,
                             selectedCategory = drawerCategory,
                             query = drawerQuery,
+                            isPlayStoreInstalled = isPlayStoreInstalled,
                             settings = settings,
                             iconCache = viewModel.iconCache,
                             onCategoryChange = viewModel::setDrawerCategory,
@@ -425,10 +428,12 @@ class MainActivity : ComponentActivity() {
                     ) {
                         GetAppsOverlay(
                             installedApps = allApps,
+                            isPlayStoreInstalled = isPlayStoreInstalled,
                             onOpenStoreHome = viewModel::openAppStoreHome,
                             onSearchStore = viewModel::searchAppStore,
                             onDownloadPackage = viewModel::downloadAppFromStore,
                             onLaunchInstalledApp = viewModel::launchApp,
+                            onPinStoreToHome = { viewModel.pinStoreToHome() },
                             onClose = viewModel::closeOverlay
                         )
                     }

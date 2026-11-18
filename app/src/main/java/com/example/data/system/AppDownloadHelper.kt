@@ -102,8 +102,14 @@ object AppDownloadHelper {
         )
     }
 
+    const val PLAY_STORE_PACKAGE = "com.android.vending"
+
+    fun isPlayStoreInstalled(context: Context): Boolean {
+        return context.packageManager.getLaunchIntentForPackage(PLAY_STORE_PACKAGE) != null
+    }
+
     fun openAppStoreHome(context: Context): Boolean {
-        val vendingIntent = context.packageManager.getLaunchIntentForPackage("com.android.vending")
+        val vendingIntent = context.packageManager.getLaunchIntentForPackage(PLAY_STORE_PACKAGE)
         val candidates = buildList {
             if (vendingIntent != null) add(vendingIntent)
             add(Intent(Intent.ACTION_VIEW, Uri.parse("market://apps")))

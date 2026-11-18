@@ -11,6 +11,7 @@ import com.example.data.local.AppUsageEntity
 import com.example.data.local.HomeItemEntity
 import com.example.data.local.LauncherDatabase
 import com.example.data.local.SettingsDataStore
+import com.example.data.system.AppDownloadHelper
 import com.example.data.system.AppIconCache
 import com.example.data.system.ConnectivityRepository
 import com.example.data.system.DefaultLauncherHelper
@@ -116,6 +117,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _rawApps = MutableStateFlow<List<AppInfo>>(emptyList())
     private val _lastAppScanMs = MutableStateFlow(0L)
+    private val _isPlayStoreInstalled = MutableStateFlow(
+        AppDownloadHelper.isPlayStoreInstalled(application)
+    )
+    val isPlayStoreInstalled: StateFlow<Boolean> = _isPlayStoreInstalled.asStateFlow()
+
     private val _externalIconPacks = MutableStateFlow<List<ExternalIconPack>>(emptyList())
     val externalIconPacks: StateFlow<List<ExternalIconPack>> = _externalIconPacks.asStateFlow()
 
@@ -345,9 +351,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val result = appsRepo.loadInstalledApps()
             _rawApps.value = result.apps
             _lastAppScanMs.value = result.scanDurationMs
+            _isPlayStoreInstalled.value = AppDownloadHelper.isPlayStoreInstalled(getApplication())
 
             if (seedIfNeeded) {
                 seedInitialHomeIfEmpty(result.apps)
+                ensureStoreShortcutSeededOnce(result.apps)
             }
 
             if (settings.value.preloadIcons) {
@@ -409,20 +417,117 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             )
         }
 
-        // Fill 8 starter apps on Page 0 below the Clock widget
-        val homeApps = apps.filter { a -> dockApps.none { it.componentKey == a.componentKey } }.take(8)
-        homeApps.forEachIndexed { idx, app ->
+        // Put Play Store first on Page 0 if installed, otherwise add Zstar App Store shortcut
+        val playStoreApp = apps.firstOrNull { it.packageName == AppDownloadHelper.PLAY_STORE_PACKAGE }
+        var nextOrder = 1
+        if (playStoreApp != null && dockApps.none { it.componentKey == playStoreApp.componentKey }) {
             starterItems.add(
                 HomeItemEntity(
                     type = HomeItemType.APP.name,
                     pageIndex = 0,
-                    orderIndex = idx + 1,
+                    orderIndex = nextOrder++,
+                    componentKey = playStoreApp.componentKey
+                )
+            )
+        } else if (playStoreApp == null) {
+            starterItems.add(
+                HomeItemEntity(
+                    type = HomeItemType.ZSTAR_STORE_SHORTCUT.name,
+                    pageIndex = 0,
+                    orderIndex = nextOrder++
+                )
+            )
+        }
+
+        // Fill remaining starter apps on Page 0 below the Clock widget
+        val homeApps = apps.filter { a ->
+            dockApps.none { it.componentKey == a.componentKey } &&
+                a.componentKey != playStoreApp?.componentKey
+        }.take(7)
+        homeApps.forEach { app ->
+            starterItems.add(
+                HomeItemEntity(
+                    type = HomeItemType.APP.name,
+                    pageIndex = 0,
+                    orderIndex = nextOrder++,
                     componentKey = app.componentKey
                 )
             )
         }
 
         homeItemDao.insertAll(starterItems)
+        settingsStore.markStoreShortcutSeeded()
+    }
+
+    private suspend fun ensureStoreShortcutSeededOnce(apps: List<AppInfo>) {
+        if (settingsStore.isStoreShortcutSeeded()) return
+        val existing = homeItems.value
+        val playStoreApp = apps.firstOrNull { it.packageName == AppDownloadHelper.PLAY_STORE_PACKAGE }
+        val alreadyHasStore = existing.any {
+            it.type == HomeItemType.ZSTAR_STORE_SHORTCUT ||
+                (playStoreApp != null && it.componentKey == playStoreApp.componentKey)
+        }
+        if (!alreadyHasStore) {
+            val currentOnPage0 = existing.filter { it.pageIndex == 0 && it.type != HomeItemType.DOCK_APP }
+            val nextOrder = (currentOnPage0.maxOfOrNull { it.orderIndex } ?: 0) + 1
+            if (playStoreApp != null) {
+                homeItemDao.insertItem(
+                    HomeItemEntity(
+                        type = HomeItemType.APP.name,
+                        pageIndex = 0,
+                        orderIndex = nextOrder,
+                        componentKey = playStoreApp.componentKey
+                    )
+                )
+            } else {
+                homeItemDao.insertItem(
+                    HomeItemEntity(
+                        type = HomeItemType.ZSTAR_STORE_SHORTCUT.name,
+                        pageIndex = 0,
+                        orderIndex = nextOrder
+                    )
+                )
+            }
+        }
+        settingsStore.markStoreShortcutSeeded()
+    }
+
+    fun pinStoreToHome(pageIndex: Int = 0) {
+        viewModelScope.launch {
+            val playStoreApp = allApps.value.firstOrNull {
+                it.packageName == AppDownloadHelper.PLAY_STORE_PACKAGE
+            }
+            val alreadyPinned = homeItems.value.any {
+                it.type == HomeItemType.ZSTAR_STORE_SHORTCUT ||
+                    (playStoreApp != null && it.componentKey == playStoreApp.componentKey)
+            }
+            if (alreadyPinned) {
+                _events.tryEmit(LauncherActionEvent.ToastMessage("Store shortcut is already on your Home screen"))
+                return@launch
+            }
+            val currentOnPage = homeItems.value.filter { it.pageIndex == pageIndex && it.type != HomeItemType.DOCK_APP }
+            val nextOrder = (currentOnPage.maxOfOrNull { it.orderIndex } ?: 0) + 1
+            if (playStoreApp != null) {
+                homeItemDao.insertItem(
+                    HomeItemEntity(
+                        type = HomeItemType.APP.name,
+                        pageIndex = pageIndex,
+                        orderIndex = nextOrder,
+                        componentKey = playStoreApp.componentKey
+                    )
+                )
+                _events.tryEmit(LauncherActionEvent.ToastMessage("Play Store pinned to Home"))
+            } else {
+                homeItemDao.insertItem(
+                    HomeItemEntity(
+                        type = HomeItemType.ZSTAR_STORE_SHORTCUT.name,
+                        pageIndex = pageIndex,
+                        orderIndex = nextOrder
+                    )
+                )
+                _events.tryEmit(LauncherActionEvent.ToastMessage("App Store pinned to Home"))
+            }
+        }
     }
 
     fun refreshExternalIconPacks() {
